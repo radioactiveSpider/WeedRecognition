@@ -1,6 +1,5 @@
 import cv2
 import csv
-import random
 import argparse
 import numpy as np
 from Data import Data
@@ -58,11 +57,10 @@ def generate_columns(hist_size):
     return color_arr
 
 
-def create_csv(data, labels):
+def create_csv(data, labels, filename, hist_size):
     lbl_idx = 0
-    hist_size = 21
     colors = generate_columns(hist_size)
-    with open("data.csv", "w", newline="") as file:
+    with open(filename, "w", newline="") as file:
         columns = []
         columns = colors.copy()
         columns.extend(["number_of_pic", "x_1", "x_2", "y_1", "y_2", "weed/not weed"])
@@ -170,24 +168,25 @@ def is_red_in_image(input_image):
     return hist[hist.shape[0] - 1] != 0
 
 
-def apply_median_blur(raw_data):
+def apply_median_blur(raw_data, median_filter_param):
     for i in range(len(raw_data)):
-        raw_data[i] = cv2.medianBlur(raw_data[i], 5)
+        raw_data[i] = cv2.medianBlur(raw_data[i], median_filter_param)
 
 
-def run():
+def run(filename, image_path, annotation_path, rows, cols, amount_of_bins, median_filter_param):
 
-    image_paths = read_image_paths('dataset-master/images')
+    image_paths = read_image_paths(image_path)
     raw_data = read_images_into_arr(image_paths)
-    apply_median_blur(raw_data)
+    apply_median_blur(raw_data, median_filter_param)
 
-    annotation_paths = read_image_paths('dataset-master/annotations')
+    annotation_paths = read_image_paths(annotation_path)
     annotations = read_images_into_arr(annotation_paths)
 
-    splited_data = split_images(raw_data, 3, 5)
-    splited_annotated_data = split_images(annotations, 3, 5)
+    splited_data = split_images(raw_data, rows, cols)
+    splited_annotated_data = split_images(annotations, rows, cols)
 
-    build_rgb_hist(splited_data, 21)
+    build_rgb_hist(splited_data, amount_of_bins)
 
     labels = create_labels(splited_annotated_data)
-    create_csv(splited_data, labels)
+    create_csv(splited_data, labels, filename, amount_of_bins)
+    return filename
