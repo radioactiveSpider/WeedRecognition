@@ -36,7 +36,7 @@ def create_config(filename):
 
 def fill_accuracies(filename, data_filename):
     params = pd.read_csv(filename)
-    for i in range(290, 320):
+    for i in range(320, 340):
         data_filename = handle_data.run(data_filename, 'dataset-master/images', 'dataset-master/annotations',
                                         int(params.iloc[i]['no_of_tiles_x']), int(params.iloc[i]['no_of_tiles_y']),
                                         int(params.iloc[i]['no_of_bins']), int(params.iloc[i]['median_filter_param']))
