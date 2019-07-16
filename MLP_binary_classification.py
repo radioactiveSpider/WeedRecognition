@@ -16,30 +16,30 @@ def create_model(input_dim, output_of_hidden_layer):
     return model
 
 
-def create_graph_of_acc(history, no):
+def create_graph_of_acc(history):
     fig, ax = plt.subplots()
     ax.plot(history.history['acc'])
     ax.plot(history.history['val_acc'])
 
     ax.set(xlabel='epoch', ylabel='accuracy',
-           title='model accuracy' + '_' + str(no))
+           title='model accuracy')
     ax.grid()
     ax.legend(['train', 'test'], loc='upper left')
 
-    fig.savefig('model accuracy' + '_' + str(no))
+    fig.savefig('model accuracy')
 
 
-def create_graph_of_loss(history, no):
+def create_graph_of_loss(history):
     fig, ax = plt.subplots()
     ax.plot(history.history['loss'])
     ax.plot(history.history['val_loss'])
 
     ax.set(xlabel='epoch', ylabel='loss',
-           title='model accuracy' + '_' + str(no))
+           title='model loss')
     ax.grid()
     ax.legend(['train', 'test'], loc='upper left')
 
-    fig.savefig('model loss' + '_' + str(no))
+    fig.savefig('model loss')
 
 
 def train_and_evaluate_model(input_dim, output_of_hidden_layer, x_train, y_train, x_test, y_test):

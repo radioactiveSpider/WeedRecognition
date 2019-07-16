@@ -4,6 +4,7 @@ import handle_data
 import pandas as pd
 import numpy as np
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
 import csv
 
 
@@ -63,20 +64,11 @@ def learn_and_save_best_model(params, data_filename):
 
     model = MLP_binary_classification.create_model(int(params["no_of_bins"]) * 3, int(params["no_of_hid_layer_neurons"]))
     model.fit(x, y, batch_size=100, epochs=100)
-
     model.save("learned_model.h5")
 
 
-def get_prediction_for_test_set():
-
-    model = load_model('learned_model.h5')
-
-    best_params = find_best_model("config.csv")
-
-    data_filename = handle_data.run('test_data.csv', 'dataset-master/test_images', 'dataset-master/test_annotations',
-                                    int(best_params['no_of_tiles_x']), int(best_params['no_of_tiles_y']),
-                                    int(best_params['no_of_bins']), int(best_params['median_filter_param']))
-    x, y = MLP_binary_classification.get_dataset(data_filename, int(best_params['no_of_bins']) * 3)
+def get_prediction_for_test_set(model_filename, x, y):
+    model = load_model(model_filename)
 
     y_pred = model.predict(x)
     y_pred = (y_pred > 0.5)
@@ -88,12 +80,25 @@ def get_prediction_for_test_set():
     print((cm[0][0] + cm[1][1]) / np.sum(cm))
 
 
+def create_graph_for_best_model(params, x, y):
+    model = MLP_binary_classification.create_model(int(params['no_of_bins']) * 3, int(params['no_of_hid_layer_neurons']))
+    (x_train, x_test, y_train, y_test) = train_test_split(x, y, test_size=0.3, random_state=42)
+    history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=100, batch_size=100)
+    MLP_binary_classification.create_graph_of_acc(history)
+    MLP_binary_classification.create_graph_of_loss(history)
+
+
 def run():
-    fill_accuracies("config.csv", "data.csv")
-    param = find_best_model("config.csv")
-    print(param)
-    learn_and_save_best_model(param, "data.csv")
-    get_prediction_for_test_set()
+    #fill_accuracies("config.csv", "data.csv")
+    params = find_best_model("config.csv")
+    print("best params is:\n")
+    print(params)
+    learn_and_save_best_model(params, "data.csv")
 
+    handle_data.run('test_data.csv', 'dataset-master/test_images', 'dataset-master/test_annotations',
+                    int(params['no_of_tiles_x']), int(params['no_of_tiles_y']),
+                    int(params['no_of_bins']), int(params['median_filter_param']))
+    x, y = MLP_binary_classification.get_dataset('test_data.csv', int(params['no_of_bins']) * 3)
 
-run()
+    create_graph_for_best_model(params, x, y)
+    get_prediction_for_test_set('learned_model.h5', x, y)
