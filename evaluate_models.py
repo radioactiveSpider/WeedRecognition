@@ -90,7 +90,7 @@ def create_graph_for_best_model(params, x, y, no_of_epoch, batch_len):
 
 
 def run():
-    fill_accuracies("config.csv", "data.csv", 100, 100)
+    #fill_accuracies("config.csv", "data.csv", 100, 100)
     params = find_best_model("config.csv")
     print("best params is:\n")
     print(params)
@@ -103,3 +103,6 @@ def run():
 
     create_graph_for_best_model(params, x, y, 100, 100)
     get_prediction_for_test_set('learned_model.h5', x, y)
+
+
+run()

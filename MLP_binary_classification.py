@@ -97,7 +97,7 @@ def find_mean_accuracy(histories):
 
 def get_dataset(data_filename, amount_of_vars):
     data_set = pd.read_csv(data_filename)
-    data_set = data_set.sample(frac=1)
+    #data_set = data_set.sample(frac=1)
     x = data_set.iloc[:, 0:amount_of_vars]
     y = data_set.iloc[:, -1]
     x = normalize_data(x)
