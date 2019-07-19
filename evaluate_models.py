@@ -60,12 +60,12 @@ def learn_and_save_best_model(params, data_filename, no_of_epoch, batch_len):
                                     int(params['no_of_tiles_x']), int(params['no_of_tiles_y']),
                                     int(params['no_of_bins']), int(params['median_filter_param']))
 
-    x = MLP_binary_classification.get_dataset(data_filename, int(params["no_of_bins"]) * 3)[0]
-    y = MLP_binary_classification.get_dataset(data_filename, int(params["no_of_bins"]) * 3)[1]
+    x = MLP_binary_classification.get_dataset(data_filename, int(params['no_of_bins']) * 3)[0]
+    y = MLP_binary_classification.get_dataset(data_filename, int(params['no_of_bins']) * 3)[1]
 
-    model = MLP_binary_classification.create_model(int(params["no_of_bins"]) * 3, int(params["no_of_hid_layer_neurons"]))
+    model = MLP_binary_classification.create_model(int(params['no_of_bins']) * 3, int(params['no_of_hid_layer_neurons']))
     model.fit(x, y, batch_size=batch_len, epochs=no_of_epoch)
-    model.save("learned_model.h5")
+    model.save('learned_model.h5')
 
 
 def get_prediction_for_test_set(model_filename, x, y):
@@ -104,5 +104,3 @@ def run():
     create_graph_for_best_model(params, x, y, 100, 100)
     get_prediction_for_test_set('learned_model.h5', x, y)
 
-
-run()

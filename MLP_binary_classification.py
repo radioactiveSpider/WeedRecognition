@@ -11,7 +11,6 @@ import pandas as pd
 def create_model(input_dim, output_of_hidden_layer):
     model = Sequential()
     model.add(Dense(output_of_hidden_layer, input_dim=input_dim, activation='relu', kernel_initializer='random_normal'))
-    #model.add(Dropout(0.5))
     model.add(Dense(1, activation='sigmoid', kernel_initializer='random_normal'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model

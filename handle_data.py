@@ -5,6 +5,7 @@ import numpy as np
 from Data import Data
 from imutils import paths
 from Coordinates import Coordinates
+from skimage.feature import greycomatrix, greycoprops
 
 
 def create_args():
@@ -57,19 +58,18 @@ def generate_columns(hist_size):
     return color_arr
 
 
-def create_csv(data, labels, filename, hist_size):
+def create_csv(data, labels, filename, features):
     lbl_idx = 0
-    colors = generate_columns(hist_size)
     with open(filename, "w", newline="") as file:
         columns = []
-        columns = colors.copy()
+        columns = features.copy()
         columns.extend(["number_of_pic", "x_1", "x_2", "y_1", "y_2", "weed/not weed"])
         writer = csv.DictWriter(file, fieldnames=columns)
         writer.writeheader()
         for item in data:
             dict = {}
-            for i in range(len(colors)):
-                dict[colors[i]] = item.data[i]
+            for i in range(len(features)):
+                dict[features[i]] = item.data[features[i]]#TODO: CHANGE FEATURES FOR RGB
             dict["number_of_pic"] = item.number
             dict["x_1"] = item.coordinates.x_1
             dict["x_2"] = item.coordinates.x_2
@@ -168,16 +168,26 @@ def is_red_in_image(input_image):
     return hist[hist.shape[0] - 1] != 0
 
 
-def apply_median_blur(raw_data, median_filter_param):
-    for i in range(len(raw_data)):
-        raw_data[i] = cv2.medianBlur(raw_data[i], median_filter_param)
+def apply_median_blur(splited_data, median_filter_param):
+    for j in range(len(splited_data)):
+        splited_data[j].data = cv2.medianBlur(splited_data[j], median_filter_param)
 
 
-def run(filename, image_path, annotation_path, rows, cols, amount_of_bins, median_filter_param):
+def build_glcm_yiq_features(splited_data):
+    for j in range(len(splited_data)):
+        grey_image = cv2.cvtColor(splited_data[j].data, cv2.COLOR_BGR2GRAY)
+        gcm = greycomatrix(grey_image, [1], [0], levels=256)
+        dict = {}
+        dict["contrast"] = greycoprops(gcm, 'contrast')[0][0]
+        dict["correlation"] = greycoprops(gcm, 'correlation')[0][0]
+        dict["luminance"] = 0
+        dict["hue"] = 0
+        splited_data[j].data = dict
 
+
+def get_data(image_path, annotation_path, rows, cols):
     image_paths = read_image_paths(image_path)
     raw_data = read_images_into_arr(image_paths)
-    apply_median_blur(raw_data, median_filter_param)
 
     annotation_paths = read_image_paths(annotation_path)
     annotations = read_images_into_arr(annotation_paths)
@@ -185,8 +195,25 @@ def run(filename, image_path, annotation_path, rows, cols, amount_of_bins, media
     splited_data = split_images(raw_data, rows, cols)
     splited_annotated_data = split_images(annotations, rows, cols)
 
-    build_rgb_hist(splited_data, amount_of_bins)
-
     labels = create_labels(splited_annotated_data)
-    create_csv(splited_data, labels, filename, amount_of_bins)
+
+    return [splited_data, labels]
+
+
+def extract_rgb_features(filename, image_path, annotation_path, rows, cols, amount_of_bins, median_filter_param):
+    splited_data, labels = get_data(image_path, annotation_path, rows, cols)
+    apply_median_blur(splited_data, median_filter_param)
+    build_rgb_hist(splited_data, amount_of_bins)
+    create_csv(splited_data, labels, filename, generate_columns(amount_of_bins))
     return filename
+
+
+def extract_glcm_yiq_features(filename, image_path, annotation_path, rows, cols):
+    splited_data, labels = get_data(image_path, annotation_path, rows, cols)
+    build_glcm_yiq_features(splited_data)
+    create_csv(splited_data, labels, filename, ["contrast", "correlation", "luminance", "hue"])
+    return filename
+
+
+extract_glcm_yiq_features('glcm_yiq_data.csv', 'dataset-master/images', 'dataset-master/annotations', 3, 5)
+
