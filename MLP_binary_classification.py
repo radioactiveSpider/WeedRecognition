@@ -8,10 +8,20 @@ import csv
 import pandas as pd
 
 
-def create_model(input_dim, output_of_hidden_layer):
+def create_rgb_model(input_dim, output_of_hidden_layer):
     model = Sequential()
     model.add(Dense(output_of_hidden_layer, input_dim=input_dim, activation='relu', kernel_initializer='random_normal'))
     model.add(Dense(1, activation='sigmoid', kernel_initializer='random_normal'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
+
+
+def create_ann_aco_model(input_dim):
+    model = Sequential()
+    model.add(Dense(26, input_dim=input_dim, activation='tanh', kernel_initializer='random_normal'))
+    model.add(Dense(13, input_dim=input_dim, activation='relu', kernel_initializer='random_normal'))
+    model.add(Dense(29, input_dim=input_dim, activation='relu', kernel_initializer='random_normal'))
+    model.add(Dense(1, input_dim=input_dim, activation='tanh', kernel_initializer='random_normal'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
@@ -42,8 +52,13 @@ def create_graph_of_loss(history):
     fig.savefig('model loss')
 
 
-def train_and_evaluate_model(input_dim, output_of_hidden_layer, x_train, y_train, x_test, y_test, no_of_epoch, batch_len):
-    model = create_model(input_dim, output_of_hidden_layer)
+def train_and_evaluate_model(model_name, input_dim, output_of_hidden_layer, x_train, y_train, x_test, y_test, no_of_epoch, batch_len):
+    if model_name == "rgb":
+        model = create_rgb_model(input_dim, output_of_hidden_layer)
+    elif model_name == "aco":
+        model = create_ann_aco_model(4)
+    else:
+        return -1
     return model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=batch_len, epochs=no_of_epoch)
 
 
@@ -65,13 +80,13 @@ def create_csv_files(cross_val_arrs):
                 writer.writerow(dict(zip(names.copy(), arr.history[key])))
 
 
-def evaluate_model(data, labels, input_dim, output_of_hidden_layer, n_folds, no_of_epoch, batch_len):
+def evaluate_model(model_name, data, labels, input_dim, output_of_hidden_layer, n_folds, no_of_epoch, batch_len):
     skf = StratifiedKFold(n_splits=n_folds, shuffle=True)
     histories = []
     for train_index, test_index in skf.split(data, labels):
         x_train, x_test = data[train_index], data[test_index]
         y_train, y_test = labels[train_index], labels[test_index]
-        histories.append(train_and_evaluate_model(input_dim, output_of_hidden_layer, x_train, y_train, x_test, y_test, no_of_epoch, batch_len))
+        histories.append(train_and_evaluate_model(model_name, input_dim, output_of_hidden_layer, x_train, y_train, x_test, y_test, no_of_epoch, batch_len))
     return histories
 
 
@@ -103,9 +118,7 @@ def get_dataset(data_filename, amount_of_vars):
     return [x, y]
 
 
-def get_accuracy_of_model(data_filename, amount_of_bins, hid_layer_neurons, no_of_epoch, batch_len):
-    x = get_dataset(data_filename, amount_of_bins * 3)[0]
-    y = get_dataset(data_filename, amount_of_bins * 3)[1]
-
-    histories = evaluate_model(x, y, amount_of_bins * 3, hid_layer_neurons, 10, no_of_epoch, batch_len)
+def get_accuracy_of_model(model_name, data_filename, amount_of_vars, hid_layer_neurons, no_of_epoch, batch_len):
+    x, y = get_dataset(data_filename, amount_of_vars)
+    histories = evaluate_model(model_name, x, y, amount_of_vars, hid_layer_neurons, 10, no_of_epoch, batch_len)
     return find_mean_accuracy(histories)

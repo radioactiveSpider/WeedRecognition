@@ -35,10 +35,10 @@ def create_config(filename):
     return filename
 
 
-def fill_accuracies(filename, data_filename, no_of_epoch, batch_len):
+def fill_accuracies(filename, type_of_features, data_filename, no_of_epoch, batch_len):
     params = pd.read_csv(filename)
     for i in range(320, 340):
-        data_filename = handle_data.run(data_filename, 'dataset-master/images', 'dataset-master/annotations',
+        data_filename = handle_data.run(type_of_features, data_filename, 'dataset-master/images', 'dataset-master/annotations',
                                         int(params.iloc[i]['no_of_tiles_x']), int(params.iloc[i]['no_of_tiles_y']),
                                         int(params.iloc[i]['no_of_bins']), int(params.iloc[i]['median_filter_param']))
         accuracy = MLP_binary_classification.get_accuracy_of_model(data_filename, int(params.iloc[i]["no_of_bins"]),
@@ -56,12 +56,11 @@ def find_best_model(filename):
 
 
 def learn_and_save_best_model(params, data_filename, no_of_epoch, batch_len):
-    data_filename = handle_data.run(data_filename, 'dataset-master/images', 'dataset-master/annotations',
+    data_filename = handle_data.run("rgb", data_filename, 'dataset-master/images', 'dataset-master/annotations',
                                     int(params['no_of_tiles_x']), int(params['no_of_tiles_y']),
                                     int(params['no_of_bins']), int(params['median_filter_param']))
 
-    x = MLP_binary_classification.get_dataset(data_filename, int(params['no_of_bins']) * 3)[0]
-    y = MLP_binary_classification.get_dataset(data_filename, int(params['no_of_bins']) * 3)[1]
+    x, y = MLP_binary_classification.get_dataset(data_filename, int(params['no_of_bins']) * 3)
 
     model = MLP_binary_classification.create_model(int(params['no_of_bins']) * 3, int(params['no_of_hid_layer_neurons']))
     model.fit(x, y, batch_size=batch_len, epochs=no_of_epoch)
@@ -81,22 +80,27 @@ def get_prediction_for_test_set(model_filename, x, y):
     print((cm[0][0] + cm[1][1]) / np.sum(cm))
 
 
-def create_graph_for_best_model(params, x, y, no_of_epoch, batch_len):
-    model = MLP_binary_classification.create_model(int(params['no_of_bins']) * 3, int(params['no_of_hid_layer_neurons']))
+def create_graph_for_best_model(model_name, params, x, y, no_of_epoch, batch_len):
+    if model_name == "aco":
+        model = MLP_binary_classification.create_ann_aco_model(4)
+    elif model_name == "rgb":
+        model = MLP_binary_classification.create_rgb_model(int(params['no_of_bins']) * 3, int(params['no_of_hid_layer_neurons']))
+    else:
+        return -1
     (x_train, x_test, y_train, y_test) = train_test_split(x, y, test_size=0.3, random_state=42)
     history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=no_of_epoch, batch_size=batch_len)
     MLP_binary_classification.create_graph_of_acc(history)
     MLP_binary_classification.create_graph_of_loss(history)
 
 
-def run():
-    #fill_accuracies("config.csv", "data.csv", 100, 100)
-    params = find_best_model("config.csv")
+def run_rgb_features_models(config_filename, data_filename, test_data_filename):
+    #fill_accuracies("rgb", config_filename, "data.csv", 100, 100)
+    params = find_best_model(config_filename)
     print("best params is:\n")
     print(params)
-    learn_and_save_best_model(params, "data.csv", 100, 100)
+    learn_and_save_best_model(params, data_filename, 100, 100)
 
-    handle_data.run('test_data.csv', 'dataset-master/test_images', 'dataset-master/test_annotations',
+    handle_data.run("rgb", test_data_filename, 'dataset-master/test_images', 'dataset-master/test_annotations',
                     int(params['no_of_tiles_x']), int(params['no_of_tiles_y']),
                     int(params['no_of_bins']), int(params['median_filter_param']))
     x, y = MLP_binary_classification.get_dataset('test_data.csv', int(params['no_of_bins']) * 3)
@@ -104,3 +108,22 @@ def run():
     create_graph_for_best_model(params, x, y, 100, 100)
     get_prediction_for_test_set('learned_model.h5', x, y)
 
+
+def run_glcm_yiq_features_models(data_filename, test_filename, batch_len, no_of_epoch):
+    accuracy = MLP_binary_classification.get_accuracy_of_model("aco", data_filename, 4, 0, 100, 100)
+    print("accuracy of ann-aco is:\n")
+    print(accuracy)
+
+    x, y = MLP_binary_classification.get_dataset(data_filename, 4)
+    model = MLP_binary_classification.create_ann_aco_model(4)
+    model.fit(x, y, batch_size=batch_len, epochs=no_of_epoch)
+    model.save('learned_aco_model.h5')
+
+    test_data_filename = handle_data.run("glcm", test_filename, 'dataset-master/test_images',
+                                         'dataset-master/test_annotations', 3, 5, 0, 0)
+    x, y = MLP_binary_classification.get_dataset(test_data_filename, 4)
+    create_graph_for_best_model("aco", 0, x, y, 100, 100)
+    get_prediction_for_test_set('learned_aco_model.h5', x, y)
+
+
+run_glcm_yiq_features_models("glcm_yiq_data.csv", "test_aco_ann.csv", 100, 100)

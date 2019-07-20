@@ -44,12 +44,12 @@ def cut_image(image, coordinates):
     return image[int(coordinates.x_1):int(coordinates.x_2), int(coordinates.y_1):int(coordinates.y_2)]
 
 
-def print_image(image):
-    cv2.imshow("img", image)
+def print_image(title, image):
+    cv2.imshow(title, image)
     cv2.waitKey(0)
 
 
-def generate_columns(hist_size):
+def generate_color_columns(hist_size):
     colors = ["blue", "green", "red"]
     color_arr = []
     for color in colors:
@@ -70,7 +70,7 @@ def create_csv(data, labels, filename, features):
         for item in data:
             dict = {}
             for i in range(len(features)):
-                dict[features[i]] = item.data[features[i]]#TODO: CHANGE FEATURES FOR RGB
+                dict[features[i]] = item.data[features[i]]
             dict["number_of_pic"] = item.number
             dict["x_1"] = item.coordinates.x_1
             dict["x_2"] = item.coordinates.x_2
@@ -123,12 +123,16 @@ def create_labels(annotated_data):
 
 
 def build_hist(image, hist_size):
-    color = ('blue', 'green', 'red')
-    sample = []
-    for i, col in enumerate(color):
+    colors = ["blue", "green", "red"]
+    color_columns = generate_color_columns(hist_size)
+    idx_color_columns = 0
+    sample = {}
+    for i, col in enumerate(colors):
         hist = cv2.calcHist([image], [i], None, [hist_size], [0, 256])
         hist = np.ravel(hist)
-        sample.extend(hist)
+        for j in range(len(hist)):
+            sample[color_columns[idx_color_columns]] = hist[j]
+            idx_color_columns += 1
     return sample
 
 
@@ -171,7 +175,7 @@ def is_red_in_image(input_image):
 
 def apply_median_blur(splited_data, median_filter_param):
     for j in range(len(splited_data)):
-        splited_data[j].data = cv2.medianBlur(splited_data[j], median_filter_param)
+        splited_data[j].data = cv2.medianBlur(splited_data[j].data, median_filter_param)
 
 
 def build_glcm_yiq_features(splited_data):
@@ -202,20 +206,14 @@ def get_data(image_path, annotation_path, rows, cols):
     return [splited_data, labels]
 
 
-def extract_rgb_features(filename, image_path, annotation_path, rows, cols, amount_of_bins, median_filter_param):
+def run(type_of_features, filename, image_path, annotation_path, rows, cols, amount_of_bins, median_filter_param):
     splited_data, labels = get_data(image_path, annotation_path, rows, cols)
-    apply_median_blur(splited_data, median_filter_param)
-    build_rgb_hist(splited_data, amount_of_bins)
-    create_csv(splited_data, labels, filename, generate_columns(amount_of_bins))
+    if type_of_features == "rgb":
+        apply_median_blur(splited_data, median_filter_param)
+        build_rgb_hist(splited_data, amount_of_bins)
+        create_csv(splited_data, labels, filename, generate_color_columns(amount_of_bins))
+    elif type_of_features == "glcm":
+        build_glcm_yiq_features(splited_data)
+        create_csv(splited_data, labels, filename, ["contrast", "correlation", "luminance", "hue"])
     return filename
-
-
-def extract_glcm_yiq_features(filename, image_path, annotation_path, rows, cols):
-    splited_data, labels = get_data(image_path, annotation_path, rows, cols)
-    build_glcm_yiq_features(splited_data)
-    create_csv(splited_data, labels, filename, ["contrast", "correlation", "luminance", "hue"])
-    return filename
-
-
-extract_glcm_yiq_features('glcm_yiq_data.csv', 'dataset-master/images', 'dataset-master/annotations', 3, 5)
 
