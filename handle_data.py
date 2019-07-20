@@ -6,6 +6,7 @@ from Data import Data
 from imutils import paths
 from Coordinates import Coordinates
 from skimage.feature import greycomatrix, greycoprops
+from skimage.color import rgb2yiq
 
 
 def create_args():
@@ -176,12 +177,13 @@ def apply_median_blur(splited_data, median_filter_param):
 def build_glcm_yiq_features(splited_data):
     for j in range(len(splited_data)):
         grey_image = cv2.cvtColor(splited_data[j].data, cv2.COLOR_BGR2GRAY)
+        yiq_image = rgb2yiq(splited_data[j].data)
         gcm = greycomatrix(grey_image, [1], [0], levels=256)
         dict = {}
         dict["contrast"] = greycoprops(gcm, 'contrast')[0][0]
         dict["correlation"] = greycoprops(gcm, 'correlation')[0][0]
-        dict["luminance"] = 0
-        dict["hue"] = 0
+        dict["luminance"] = np.sum(yiq_image[:, :, 0:1])
+        dict["hue"] = np.sum(yiq_image[:, :, 1:2])
         splited_data[j].data = dict
 
 
